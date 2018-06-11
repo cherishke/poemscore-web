@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Poetry score</title>
+    <link href="https://cdn.bootcss.com/minireset.css/0.0.2/minireset.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/vue/2.5.15/vue.min.js"></script>
+    <script src="https://cdn.bootcss.com/axios/0.18.0/axios.min.js"></script>
+    <style>
+    header {
+        position: relative;
+        background-color: #27ae60;
+        color: #fff;
+        margin-bottom: 0;
+    }
+
+    header h1 {
+        margin: 30px 0;
+        font-size: 46px;
+        text-shadow: -5px 5px 0 rgba(0, 0, 0, .1);
+    }
+
+    section p {
+        margin: 10px 0;
+    }
+
+    .p-title {
+        margin: 20px 0;
+    }
+
+    .my-btn-primary {
+    	margin: 30px 0;
+    }
+
+    .name {
+        position: absolute;
+        top: -96px;
+        right: 0;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    h5 {
+        font-size: 1.1rem;
+    }
+
+    pre {
+        font-size: 1rem;
+        margin: 0;
+    }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12">
+                    <h1>Poetry score
+                </div>
+            </div>
+        </div>
+    </header>
+    <section>
+        {% verbatim %}
+        <div class="container" id="app">
+            <div v-if="step=='first'">
+                <div class="row" style="margin-top: 5rem;">
+                    <div class="col-md-6 offset-md-3">
+                        <div class="card">
+                            <div class="card-header">
+                                Start!
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="exampleInputEmail1">Username:</label>
+                                    <input type="type" class="form-control" id="exampleInputEmail1" placeholder="Enter your Username!" v-model="name">
+                                </div>
+                                <button class="btn btn-success" @click="changeStep">Go!</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div v-if="step=='second'" style="position: relative;">
+                <p class="pull-right name">hi,  {{ name }}</p>
+                <div class="row" style="margin-top: 20px;">
+                    <div class="col-sm" v-for="(item, idx) of poems">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">{{item.keywords}}</h5>
+                                <pre class="card-text">{{ item.content }}</pre>
+                            </div>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    A:
+                                    <input type="num" v-model="poems[idx].score.a" @input="change(idx)">
+                                </li>
+                                <li class="list-group-item">
+                                    B:
+                                    <input type="num" v-model="poems[idx].score.b" @input="change(idx)">
+                                </li>
+                                <li class="list-group-item">
+                                    C:
+                                    <input type="num" v-model="poems[idx].score.c" @input="change(idx)">
+                                </li>
+                            </ul>
+                            <div class="card-body">
+                                <p>Total: {{ item.total }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <button class="btn btn-success my-btn-primary" @click="submitHandle">Next Page</button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        {% endverbatim %}
+    </section>
+</body>
+<script>
+var app = new Vue({
+    el: '#app',
+    data: {
+        name: '',
+        step: 'first',
+        currentPage: 0,
+        poems: []
+    },
+    methods: {
+        change(idx) {
+            this.$nextTick(function () {
+                let temp =parseInt(Number(this.poems[idx].score.a))+parseInt(Number(this.poems[idx].score.b))+parseInt(Number(this.poems[idx].score.c))
+                this.$set(this.poems[idx], 'total', temp)
+            })
+        },
+        submitHandle() {
+            const self = this
+        	// http
+        	axios.post('/save/',  {
+                author: self.name,
+                currentPage: self.currentPage + 1,
+                poems: self.poems
+            } ).then(function(res) {
+	         	if (res.status == 200&& res.data.errcode == 200) {
+                    if (res.data.data.poems.length == 0) {
+                        alert('oh~ well done! noting is left!')
+                        return false
+                    }
+                    self.currentPage = res.data.id
+                    let tempS = {
+                        a: "",
+                        b: "",
+                        c: ""
+                    }
+                    self.poems = []
+                    res.data.data.poems.forEach(item => {
+                        item.score = JSON.parse(JSON.stringify(tempS))
+                        item.total = 0
+                        self.poems.push(item)
+                    })
+	         	}
+	         })
+        },
+        changeStep() {
+            this.step = 'second'
+        }
+    },
+    created() {
+    	const self = this
+        // http 加载
+        axios.get('/data/').then(function(res) {
+         	if (res.status == 200 && res.data.errcode == 200) {
+                // 修改
+                self.currentPage = res.data.id
+		        let tempS = {
+		        	a: "",
+		        	b: "",
+		        	c: ""
+		        }
+		        res.data.data.poems.forEach(item => {
+		        	item.score = JSON.parse(JSON.stringify(tempS))
+                    item.total = 0
+                    self.poems.push(item)
+		        })
+         	}
+         })
+    }
+})
+</script>
+
+</html>
