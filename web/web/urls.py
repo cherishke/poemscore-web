@@ -24,6 +24,7 @@ urlpatterns = [
     #url(r'^dealfile/', views.dealfile),
     url(r'^data/', views.getData),
     url(r'^save/', views.postData),
+    url(r'^getlist/', views.getlist),
     #url(r'^admin/', admin.site.urls),
 #url(r'^dealfile/', views.dealfile),
 ]

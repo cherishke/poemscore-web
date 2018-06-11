@@ -76,7 +76,12 @@
                             <div class="card-body">
                                 <div class="form-group">
                                     <label for="exampleInputEmail1">Username:</label>
-                                    <input type="type" class="form-control" id="exampleInputEmail1" placeholder="Enter your Username!" v-model="name">
+                                    <input type="type" class="form-control" id="exampleInputEmail1" placeholder="Enter your Username!" v-model="name" style="margin-bottom: 10px;">
+                                    <select name="" id="" class="form-control" @change="selectChange">
+                                        <option value="">请选择</option>
+                                        <option :value="item" v-for="item of options">{{ item }}</option>
+                                    </select>
+                                    <p>已选择：{{ selected }}</p>
                                 </div>
                                 <button class="btn btn-success" @click="changeStep">Go!</button>
                             </div>
@@ -131,7 +136,9 @@ var app = new Vue({
         name: '',
         step: 'first',
         currentPage: 0,
-        poems: []
+        poems: [],
+        options: [],
+        selected: []
     },
     methods: {
         change(idx) {
@@ -146,7 +153,9 @@ var app = new Vue({
         	axios.post('/save/',  {
                 author: self.name,
                 currentPage: self.currentPage + 1,
-                poems: self.poems
+                poems: self.poems,
+                selected: self.selected,
+                name: self.name
             } ).then(function(res) {
 	         	if (res.status == 200&& res.data.errcode == 200) {
                     if (res.data.data.poems.length == 0) {
@@ -169,28 +178,43 @@ var app = new Vue({
 	         })
         },
         changeStep() {
+            let self = this
             this.step = 'second'
+            // http 加载
+            axios.post('/data/', {
+                selected: this.selected,
+                name: this.name
+            }).then(function(res) {
+                if (res.status == 200 && res.data.errcode == 200) {
+                    // 修改
+                    self.currentPage = res.data.id
+                    let tempS = {
+                        a: "",
+                        b: "",
+                        c: ""
+                    }
+                    res.data.data.poems.forEach(item => {
+                        item.score = JSON.parse(JSON.stringify(tempS))
+                        item.total = 0
+                        self.poems.push(item)
+                    })
+                }
+            })
+        },
+        selectChange(e) {
+            if (e.target.value != '') {
+                this.selected.push(e.target.value)
+            }
         }
     },
     created() {
-    	const self = this
-        // http 加载
-        axios.get('/data/').then(function(res) {
-         	if (res.status == 200 && res.data.errcode == 200) {
-                // 修改
-                self.currentPage = res.data.id
-		        let tempS = {
-		        	a: "",
-		        	b: "",
-		        	c: ""
-		        }
-		        res.data.data.poems.forEach(item => {
-		        	item.score = JSON.parse(JSON.stringify(tempS))
-                    item.total = 0
-                    self.poems.push(item)
-		        })
-         	}
-         })
+        const self = this
+        axios.get('/getlist/').then(res => {
+            if (res.status == 200) {
+                console.log(res)
+                self.options = res.data
+            }
+        })
     }
 })
 </script>

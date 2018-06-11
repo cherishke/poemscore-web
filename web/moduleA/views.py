@@ -16,14 +16,18 @@ nowtime=str(time.time())
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
 FILE_ROOT = os.path.join(PROJECT_ROOT, 'data')
+OUTPUT_ROOT = os.path.join(PROJECT_ROOT, 'resultdata')
 
 def index(request):
+    nowtime = str(time.time())
     return render(request, "index.html")
 
 # 遍历指定目录，显示目录下的所有文件名
-def eachFile():
+def eachFile(arr):
+    # 传入 selected
+
     filepath="data"
-    pathDir =  os.listdir(filepath)
+    pathDir = os.listdir(filepath)
     totallist = []
     for allDir in pathDir:
         realpath = os.path.join(FILE_ROOT, allDir)
@@ -48,29 +52,6 @@ def eachFile():
     random.shuffle(totallist)
     return totallist
 
-'''
-def dealfile():
-    i = 1
-    dic = []
-    poem = ""
-    f = open("data\modelA.txt", "r", encoding="utf-8")
-    for line in f.readlines():
-        if i % 9 == 1:
-            linelist = line.split(":")
-            id = linelist[0] + " "
-        if i % 9 == 2:
-            keywordlist = line.split(":")
-            id += keywordlist[1].strip()
-        if i % 9 > 2 and i % 9 < 9:
-            poem += line
-        if i % 9 == 0:
-            list = [id, poem]
-            dic.append(list)
-            poem = ""
-        i = i + 1
-    return dic
-'''
-
 # Build response data structure
 def responseData(idx, totallist):
     i = idx * PER_PAGE
@@ -78,8 +59,7 @@ def responseData(idx, totallist):
             'id': idx,
             'data': {
                 'poems': []
-            }
-            }
+            }}
     count = 0
     while count < PER_PAGE:
         if ((i + count) < len(totallist)):
@@ -93,24 +73,31 @@ def responseData(idx, totallist):
 
 
 # 统一获取数据方式
-def getInitData():
+def getInitData(data):
     print('获取数据 -----------')
-    #print(cache.get('init_data'))
-    if not cache.get('init_data'):
-        totallist = eachFile()
-        cache.set('init_data', totallist, 3600)
+    CACHE_TAG = 'init_data_' + data['name']
+    print(CACHE_TAG)
+    if not cache.get(CACHE_TAG):
+        totallist = eachFile(data['selected'])
+        cache.set(CACHE_TAG, totallist, 3600)
     else:
-        totallist = cache.get('init_data')
+        totallist = cache.get(CACHE_TAG)
     return totallist
 
+def getlist(request):
+    filepath = "data"
+    pathDir = os.listdir(filepath)
+    return HttpResponse(json.dumps(pathDir), content_type="application/json")
 
 # 初始获取数据
 def getData(request):
-    # TODO: 获取初始数据
-    totallist = getInitData()
-    id = 0
-    resp = responseData(id, totallist)
-    return HttpResponse(json.dumps(resp), content_type="application/json")
+    if request.method == 'POST':
+        req = json.loads(request.body)
+        # TODO: 获取初始数据
+        totallist = getInitData(req)
+        id = 0
+        resp = responseData(id, totallist)
+        return HttpResponse(json.dumps(resp), content_type="application/json")
 
 
 # 提交评分并且返回下次数据
@@ -119,7 +106,6 @@ def postData(request):
         req = json.loads(request.body)
 
         # TODO: 保存数据
-        print(req)
         username=str(req['author'])
         for i in range(len(req['poems'])):
             title=str(req['poems'][i]['keywords']).split(" ")[0]
@@ -131,14 +117,14 @@ def postData(request):
             score_c=str(req['poems'][i]['score']['b'])
             score_total=str(req['poems'][i]['total'])
 
-            resultfile = "resultdata\\" + username + "-" + modelname + nowtime
+            resultfile = os.path.join(OUTPUT_ROOT, username + "-" + modelname + nowtime)
             f=open(resultfile,"a+",encoding="utf-8")
             f.write(title+":"+score_a+"+"+score_b+"+"+score_c+"="+score_total+"\n")
             f.write(keyword+"\n")
             f.write(req['poems'][i]['content']+"\n")
 
         # TODO: 获取下一组诗歌
-        totallist = getInitData()
+        totallist = getInitData(req)
         current = req['currentPage']
         resp = responseData(current, totallist)
         return HttpResponse(json.dumps(resp), content_type="application/json")
