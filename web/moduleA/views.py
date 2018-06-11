@@ -14,6 +14,9 @@ import time
 PER_PAGE = 3
 nowtime=str(time.time())
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir))
+FILE_ROOT = os.path.join(PROJECT_ROOT, 'data')
+
 def index(request):
     return render(request, "index.html")
 
@@ -23,7 +26,8 @@ def eachFile():
     pathDir =  os.listdir(filepath)
     totallist = []
     for allDir in pathDir:
-        realpath=filepath+"\\"+allDir
+        # realpath=filepath + '/' +allDir
+        realpath = os.path.join(FILE_ROOT, allDir)
         modelName=allDir.split(".")[0]
         i=1
         poem = ""
