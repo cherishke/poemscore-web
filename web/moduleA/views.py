@@ -26,7 +26,6 @@ def eachFile():
     pathDir =  os.listdir(filepath)
     totallist = []
     for allDir in pathDir:
-        # realpath=filepath + '/' +allDir
         realpath = os.path.join(FILE_ROOT, allDir)
         modelName=allDir.split(".")[0]
         i=1
